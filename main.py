@@ -104,7 +104,9 @@ class Player:
 
     def draw_health(self):
         if self.health > 0:
-            pygame.draw.rect(screen, (41, 24, 64), (12, HEIGHT -
+            pygame.draw.rect(screen, (86, 91, 92), (12, HEIGHT -
+                             28, 196, 16))
+            pygame.draw.rect(screen, (54, 187, 201), (12, HEIGHT -
                              28, (self.health / MAX_HEALTH) * 196, 16))
 
 
@@ -154,15 +156,23 @@ class Shard:
                            TILE_SIZE, TILE_SIZE, TILE_SIZE)
         screen.blit(shard_img, rect)
 
+def game_over(enemies):
+    if len(enemies) == 0:
+        pygame.draw.rect(screen, (0, 0, 0), (HEIGHT // 2, WIDTH // 2, 16))
+        font = pygame.font.Font('freesansbold.ttf', 24)
+        text = font.render(f"GAME OVER!", True, (255, 255, 255))
+        screen.blit(text, (10, HEIGHT - 70))
+
 
 # Create player and enemies
 player = Player(1, 1)
-enemies = [Enemy(18, 9), Enemy(1, 8)]
+enemies = [Enemy(18, 9), Enemy(1, 8), Enemy(18, 1)]
 
 player_pos = [0, 0]
-enemy_pos = [[18, 9], [1, 8]]
+enemy_pos = [[18, 9], [1, 8], [18, 1]]
 
-shards = [Shard(player_pos, enemy_pos) for x in range(5)]
+shards = [Shard(player_pos, enemy_pos) for _ in range(5)]
+shard_count = 0
 
 
 # Make sure enemies start at least 1 tile away from each other
@@ -190,7 +200,7 @@ while True:
         elif keys[pygame.K_DOWN]:
             player.move(0, 1, "down")
 
-    if frame_count % 4 == 0:  # Enemies move less frequently
+    if frame_count % 3 == 0:  # Enemies move less frequently
         enemy_positions = {(e.x, e.y) for e in enemies}
         for enemy in enemies:
             enemy.move_towards(player, enemy_positions)
@@ -199,7 +209,12 @@ while True:
     # Health reduction logic
     for enemy in enemies:
         if (enemy.x, enemy.y) == (player.x, player.y):
-            player.health = max(0, player.health - 1)
+            player.health = max(0, player.health - 10)
+
+    for shard in shards:
+        if (shard.x, shard.y) == (player.x, player.y):
+            shards.remove(shard)
+            shard_count += 1
 
     screen.fill((0, 0, 0))
     for y, row in enumerate(MAZE):
@@ -208,13 +223,17 @@ while True:
                                TILE_SIZE, TILE_SIZE)
             screen.blit(wall_img if tile == "#" else floor_img, rect)
 
-    player.draw()
-    player.draw_health()
-    for enemy in enemies:
-        enemy.draw()
-
     for shard in shards:
         shard.draw()
+
+    player.draw()
+    player.draw_health()
+    font = pygame.font.Font('freesansbold.ttf', 24)
+    text = font.render(f"Shard count: {shard_count}", True, (255, 255, 255))
+    screen.blit(text, (10, HEIGHT - 70))
+
+    for enemy in enemies:
+        enemy.draw()
 
     pygame.display.flip()
     clock.tick(10)
@@ -222,3 +241,4 @@ while True:
 
 
 
+#TODO: player death, key formation, gate opening, make the game harder, classes, sound effects/music
