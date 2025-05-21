@@ -1,6 +1,3 @@
-
-
-
 import pygame
 import sys
 import heapq
@@ -34,7 +31,7 @@ pygame.display.set_caption("2D Maze Game")
 # Load images
 wall_img = pygame.image.load("assets/wall.png").convert()
 floor_img = pygame.image.load("assets/floor.png").convert()
-shard_img = pygame.image.load("assets/glow_shard.png").convert()
+shard_img = pygame.image.load("assets/glow_shard.png").convert_alpha()
 player_imgs = {
     "left": pygame.transform.scale(pygame.image.load("assets/character_left.png").convert_alpha(), (TILE_SIZE, TILE_SIZE)),
     "right": pygame.transform.scale(pygame.image.load("assets/character_right.png").convert_alpha(), (TILE_SIZE, TILE_SIZE)),
@@ -43,8 +40,6 @@ player_imgs = {
 }
 enemy_img = pygame.transform.scale(pygame.image.load(
     "assets/enemy.png").convert_alpha(), (TILE_SIZE, TILE_SIZE))
-#healthbar_blank = pygame.image.load("assets/soul_bar.png").convert()
-#healthbar_blank = pygame.transform.scale(healthbar_blank, (200, 20))
 
 wall_img = pygame.transform.scale(wall_img, (TILE_SIZE, TILE_SIZE))
 floor_img = pygame.transform.scale(floor_img, (TILE_SIZE, TILE_SIZE))
@@ -108,9 +103,8 @@ class Player:
         screen.blit(self.img, rect)
 
     def draw_health(self):
-        #screen.blit(healthbar_blank, (10, HEIGHT - 30))
         if self.health > 0:
-            pygame.draw.rect(screen, (255, 0, 0), (12, HEIGHT -
+            pygame.draw.rect(screen, (41, 24, 64), (12, HEIGHT -
                              28, (self.health / MAX_HEALTH) * 196, 16))
 
 
@@ -132,29 +126,34 @@ class Enemy:
                            TILE_SIZE, TILE_SIZE, TILE_SIZE)
         screen.blit(enemy_img, rect)
 
-class Shard:
 
+class Shard:
     shard_positions = []
 
     def __init__(self, player_pos, enemy_pos):
-        generate_pos()
+        self.generate_pos(player_pos, enemy_pos)
 
-    # Generate randomized glowshard positions
     def generate_pos(self, player_pos, enemy_pos):
-        x = random.randint(0, len(MAZE))
-        y = random.randint(0, len(MAZE[0]))
+        while True:
+            x = random.randint(0, len(MAZE[0]) - 1)
+            y = random.randint(0, len(MAZE) - 1)
 
-        # Make sure glowshards don't generate where players or enemies are or where other shards are
-        while x != player_pos[0] and y != player_pos[0] and x != enemy_pos[0][0] and x != enemy_pos[1][0] and enemy_pos[1][1] != y and enemy_pos[0][1] != enemy_pos:
-            x = random.randint(0, len(MAZE))
-            y = random.randint(0, len(MAZE[0]))
-
-        self.x = x
-        self.y = y
+            # Ensure shard is not on player, enemies, or other shards, and it's on a walkable tile
+            if ((x, y) != tuple(player_pos) and
+                (x, y) != tuple(enemy_pos[0]) and
+                (x, y) != tuple(enemy_pos[1]) and
+                (x, y) not in Shard.shard_positions and
+                    MAZE[y][x] == " "):
+                self.x = x
+                self.y = y
+                Shard.shard_positions.append((x, y))
+                break
 
     def draw(self):
-        rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE, TILE_SIZE, TILE_SIZE)
+        rect = pygame.Rect(self.x * TILE_SIZE, self.y *
+                           TILE_SIZE, TILE_SIZE, TILE_SIZE)
         screen.blit(shard_img, rect)
+
 
 # Create player and enemies
 player = Player(1, 1)
@@ -162,6 +161,8 @@ enemies = [Enemy(18, 9), Enemy(1, 8)]
 
 player_pos = [0, 0]
 enemy_pos = [[18, 9], [1, 8]]
+
+shards = [Shard(player_pos, enemy_pos) for x in range(5)]
 
 
 # Make sure enemies start at least 1 tile away from each other
@@ -212,6 +213,8 @@ while True:
     for enemy in enemies:
         enemy.draw()
 
+    for shard in shards:
+        shard.draw()
 
     pygame.display.flip()
     clock.tick(10)
