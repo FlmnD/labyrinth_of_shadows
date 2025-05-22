@@ -1,6 +1,7 @@
 #TODO: key formation, gate opening, make the game harder, classes, sound effects/music, restart button, music on / off, second level with sword, main menu
+# shard not on gate and spawn 5 spaces apart
 
-
+from enum import Enum
 import pygame
 import sys
 import math
@@ -25,6 +26,8 @@ MAZE = [
 
 # Initialize Pygame
 pygame.init()
+pygame.mixer.init()
+
 WIDTH = len(MAZE[0]) * TILE_SIZE
 HEIGHT = len(MAZE) * TILE_SIZE + 40
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -36,6 +39,9 @@ floor_img = pygame.image.load("assets/floor.png").convert()
 shard_img = pygame.image.load("assets/glow_shard.png").convert_alpha()
 gate_img = pygame.transform.scale(pygame.image.load(
     "assets/gate.png").convert_alpha(), (TILE_SIZE, TILE_SIZE))
+menu_background = pygame.image.load("assets/menu_background.png").convert()
+menu_background = pygame.transform.scale(menu_background, (WIDTH, HEIGHT))
+#key_img = pygame.transform.scale(pygame.image.load("assets/key.png"))
 
 player_imgs = {
     "left": pygame.transform.scale(pygame.image.load("assets/character_left.png").convert_alpha(), (TILE_SIZE, TILE_SIZE)),
@@ -51,6 +57,25 @@ floor_img = pygame.transform.scale(floor_img, (TILE_SIZE, TILE_SIZE))
 shard_img = pygame.transform.scale(shard_img, (TILE_SIZE, TILE_SIZE))
 shard_icon_img = pygame.transform.scale(
     shard_img, (TILE_SIZE // (1.5), TILE_SIZE // (1.5)))
+
+button_font = pygame.font.Font('freesansbold.ttf', 36)
+
+start_button_rect = pygame.Rect(WIDTH // 2 - 100, HEIGHT // 2 - 25, 200, 50)
+cutscene_images = [
+    pygame.image.load(f"assets/intro_scene/{i}.png").convert() for i in range(1, 10)
+]
+pygame.mixer.music.load("assets/audio/eyeinthesky.mp3") 
+
+
+class GameState(Enum):
+    MENU = 1
+    CUTSCENE = 2
+    GAME = 3
+
+
+state = GameState.MENU
+cutscene_index = 0
+pygame.mixer.music.play(-1)
 
 
 def can_move(x, y):
@@ -206,77 +231,99 @@ clock = pygame.time.Clock()
 frame_count = 0
 
 while True:
+    if state == GameState.MENU:
+        screen.blit(menu_background, (0, 0))
+    else:
+        screen.fill((0, 0, 0))  
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
+            
+        if state == GameState.MENU:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if start_button_rect.collidepoint(event.pos):
+                    state = GameState.CUTSCENE
 
-    keys = pygame.key.get_pressed()
-    if frame_count % 1 == 0:
-        if keys[pygame.K_LEFT]:
-            player.move(-1, 0, "left")
-        elif keys[pygame.K_RIGHT]:
-            player.move(1, 0, "right")
-        elif keys[pygame.K_UP]:
-            player.move(0, -1, "up")
-        elif keys[pygame.K_DOWN]:
-            player.move(0, 1, "down")
+        elif state == GameState.CUTSCENE:
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                cutscene_index += 1
+                if cutscene_index >= len(cutscene_images):
+                    state = GameState.GAME
+                    pygame.mixer.music.stop()
 
-    if frame_count % 3 == 0:
-        enemy_positions = {(e.x, e.y) for e in enemies}
-        for enemy in enemies:
-            enemy.move_towards(player, enemy_positions)
+    if state == GameState.MENU:
+        pygame.draw.rect(screen, (255, 255, 255), start_button_rect)
+        text = button_font.render("START", True, (0, 0, 0))
+        text_rect = text.get_rect(center=start_button_rect.center)
+        screen.blit(text, text_rect)
+
+    elif state == GameState.CUTSCENE:
+        screen.blit(pygame.transform.scale(
+            cutscene_images[cutscene_index], (WIDTH, HEIGHT)), (0, 0))
+        
+    elif state == GameState.GAME:
+        keys = pygame.key.get_pressed()
+        if frame_count % 1 == 0:
+            if keys[pygame.K_LEFT]:
+                player.move(-1, 0, "left")
+            elif keys[pygame.K_RIGHT]:
+                player.move(1, 0, "right")
+            elif keys[pygame.K_UP]:
+                player.move(0, -1, "up")
+            elif keys[pygame.K_DOWN]:
+                player.move(0, 1, "down")
+
+        if frame_count % 3 == 0:
             enemy_positions = {(e.x, e.y) for e in enemies}
+            for enemy in enemies:
+                enemy.move_towards(player, enemy_positions)
+                enemy_positions = {(e.x, e.y) for e in enemies}
 
-    for enemy in enemies:
-        if (enemy.x, enemy.y) == (player.x, player.y):
-            player.health = max(0, player.health - 10)
+        for enemy in enemies:
+            if (enemy.x, enemy.y) == (player.x, player.y):
+                player.health = max(0, player.health - 10)
 
-    for shard in shards:
-        if (shard.x, shard.y) == (player.x, player.y):
-            shards.remove(shard)
-            shard_count += 1
+        for shard in shards:
+            if (shard.x, shard.y) == (player.x, player.y):
+                shards.remove(shard)
+                shard_count += 1
 
-    screen.fill((0, 0, 0))
-    for y, row in enumerate(MAZE):
-        for x, tile in enumerate(row):
-            rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE,
-                               TILE_SIZE, TILE_SIZE)
-            screen.blit(wall_img if tile == "#" else floor_img, rect)
+        for y, row in enumerate(MAZE):
+            for x, tile in enumerate(row):
+                rect = pygame.Rect(x * TILE_SIZE, y * TILE_SIZE,
+                                TILE_SIZE, TILE_SIZE)
+                screen.blit(wall_img if tile == "#" else floor_img, rect)
 
-    screen.blit(gate_img, (GATE_POS[0] * TILE_SIZE, GATE_POS[1] * TILE_SIZE))
+        screen.blit(gate_img, (GATE_POS[0] * TILE_SIZE, GATE_POS[1] * TILE_SIZE))
 
-    if (player.x, player.y) == GATE_POS and shard_count >= 5:
+        if (player.x, player.y) == GATE_POS and shard_count >= 5:
+            font = pygame.font.Font('freesansbold.ttf', 24)
+            prompt = font.render("Press E to enter", True, (255, 255, 255))
+            screen.blit(prompt, (WIDTH // 2 - 100, HEIGHT - 100))
+
+        if (player.x, player.y) == GATE_POS and shard_count >= 5:
+            if keys[pygame.K_e]:
+                print("Entering gate!")
+
+        for shard in shards:
+            shard.draw()
+
+        player.draw()
+        player.draw_health()
+
         font = pygame.font.Font('freesansbold.ttf', 24)
-        prompt = font.render("Press E to enter", True, (255, 255, 255))
-        screen.blit(prompt, (WIDTH // 2 - 100, HEIGHT - 100))
+        shard_icon_x = 220
+        shard_icon_y = HEIGHT - 50
+        text = font.render(f"x {1 if shard_count == 5 else shard_count}", True, (255, 255, 255))
+        screen.blit(shard_icon_img, (shard_icon_x, shard_icon_y + 8))
+        screen.blit(text, (shard_icon_x + TILE_SIZE // 2 + 10, HEIGHT - 30))
 
-    if (player.x, player.y) == GATE_POS and shard_count >= 5:
-        if keys[pygame.K_e]:
-            print("Entering gate!")
+        for enemy in enemies:
+            enemy.draw()
 
-
-
-    for shard in shards:
-        shard.draw()
-
-    player.draw()
-    player.draw_health()
-
-    font = pygame.font.Font('freesansbold.ttf', 24)
-    # text = font.render(f"Shard count: {shard_count}", True, (255, 255, 255))
-    # screen.blit(text, (10, HEIGHT - 70))
-
-    shard_icon_x = 220
-    shard_icon_y = HEIGHT - 50
-    text = font.render(f"x {shard_count}", True, (255, 255, 255))
-    screen.blit(shard_icon_img, (shard_icon_x, shard_icon_y + 8))
-    screen.blit(text, (shard_icon_x + TILE_SIZE // 2 + 10, HEIGHT - 30))
-
-    for enemy in enemies:
-        enemy.draw()
-
-    game_over(player)
+        game_over(player)
     pygame.display.flip()
     clock.tick(10)
     frame_count += 1
