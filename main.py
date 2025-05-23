@@ -29,7 +29,7 @@ pygame.mixer.music.set_volume(0.8)
 WIDTH = len(MAZE[0]) * TILE_SIZE
 HEIGHT = len(MAZE) * TILE_SIZE + 40
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("2D Maze Game")
+pygame.display.set_caption("Labyrinth of Shadows")
 
 # Load images
 wall_img = pygame.image.load("assets/wall.png").convert()
