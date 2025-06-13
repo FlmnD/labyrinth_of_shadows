@@ -257,8 +257,8 @@ def show_centered_text(main_text, sub_text):
 
 def return_to_menu():
     global player_x, player_y, state, cutscene_index
-    player_x, player_y = 4, 5  # Reset player to starting animation pos
-    cutscene_index = 0         # Optional: Reset cutscene if needed
+    player_x, player_y = 4, 5  
+    cutscene_index = 0       
     state = GameState.WALK_TO_PC
 
 
